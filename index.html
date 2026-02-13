@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>NEON RUNNER 3D - GAME</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #0fb; font-size: 24px; text-shadow: 0 0 10px #0fb; pointer-events: none; }
+        #instructions { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #0fb; font-size: 14px; opacity: 0.7; }
+        #game-over { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #f0f; font-size: 48px; text-align: center; text-shadow: 0 0 20px #f0f; }
+    </style>
+</head>
+<body>
+
+    <div id="ui">SCORE: <span id="score">0</span></div>
+    <div id="instructions">Use A e D ou SETAS para desviar</div>
+    <div id="game-over">GAME OVER<br><span style="font-size: 20px;">F5 PARA RECOMEÇAR</span></div>
+
+    <!-- Importando Three.js de um servidor rápido (CDN) -->
+    <script type="importmap">
+        { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+
+        // --- CONFIGURAÇÃO INICIAL ---
+        const scene = new THREE.Scene();
+        scene.fog = new THREE.FogExp2(0x000000, 0.05); // Neblina para dar profundidade
+
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // --- JOGADOR ---
+        const playerGeo = new THREE.BoxGeometry(1, 1, 1);
+        const playerMat = new THREE.MeshPhongMaterial({ color: 0x00ffbb, emissive: 0x00ffbb, emissiveIntensity: 0.5 });
+        const player = new THREE.Mesh(playerGeo, playerMat);
+        player.position.y = 0.5;
+        scene.add(player);
+
+        // --- CHÃO (Pista) ---
+        const groundGeo = new THREE.PlaneGeometry(10, 1000);
+        const groundMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.z = -450;
+        scene.add(ground);
+
+        // Grade para efeito visual de velocidade
+        const grid = new THREE.GridHelper(10, 100, 0x00ffbb, 0x222222);
+        grid.rotation.x = 0;
+        grid.position.z = 0;
+        scene.add(grid);
+        const grid2 = grid.clone(); // Segunda grade para loop infinito
+        grid2.position.z = -100;
+        scene.add(grid2);
+
+        // --- LUZES ---
+        const light = new THREE.PointLight(0x00ffbb, 20, 50);
+        light.position.set(0, 2, 2);
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x444444));
+
+        // --- VARIÁVEIS DO JOGO ---
+        let score = 0;
+        let speed = 0.5;
+        let gameOver = false;
+        const obstacles = [];
+        const keys = { a: false, d: false, ArrowLeft: false, ArrowRight: false };
+
+        // --- CONTROLES ---
+        window.addEventListener('keydown', (e) => keys[e.key] = true);
+        window.addEventListener('keyup', (e) => keys[e.key] = false);
+
+        // Função para criar obstáculos
+        function spawnObstacle() {
+            if(gameOver) return;
+            const geo = new THREE.BoxGeometry(Math.random() * 2 + 1, 1, 1);
+            const mat = new THREE.MeshPhongMaterial({ color: 0xff00ff, emissive: 0xff00ff });
+            const obs = new THREE.Mesh(geo, mat);
+            obs.position.set((Math.random() - 0.5) * 8, 0.5, -100);
+            scene.add(obs);
+            obstacles.push(obs);
+            setTimeout(spawnObstacle, Math.max(200, 1000 - score));
+        }
+        spawnObstacle();
+
+        // --- LOOP DE ANIMAÇÃO ---
+        function animate() {
+            if (gameOver) return;
+            requestAnimationFrame(animate);
+
+            // Movimento do jogador
+            if ((keys.a || keys.ArrowLeft) && player.position.x > -4.5) player.position.x -= 0.15;
+            if ((keys.d || keys.ArrowRight) && player.position.x < 4.5) player.position.x += 0.15;
+
+            // Movimento do cenário (Grades)
+            grid.position.z += speed;
+            grid2.position.z += speed;
+            if (grid.position.z > 10) grid.position.z = grid2.position.z - 100;
+            if (grid2.position.z > 10) grid2.position.z = grid.position.z - 100;
+
+            // Obstáculos
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].position.z += speed;
+
+                // Colisão (Hitbox simples)
+                const dX = Math.abs(player.position.x - obstacles[i].position.x);
+                const dZ = Math.abs(player.position.z - obstacles[i].position.z);
+                
+                if (dX < 1 && dZ < 0.8) {
+                    gameOver = true;
+                    document.getElementById('game-over').style.display = 'block';
+                }
+
+                // Remove obstáculos que passaram
+                if (obstacles[i].position.z > 5) {
+                    scene.remove(obstacles[i]);
+                    obstacles.splice(i, 1);
+                    score += 10;
+                    speed += 0.001; // Aumenta a dificuldade
+                    document.getElementById('score').innerText = score;
+                }
+            }
+
+            // Câmera segue levemente o jogador
+            camera.position.x += (player.position.x * 0.5 - camera.position.x) * 0.1;
+            camera.position.y = 2.5;
+            camera.position.z = 5;
+            camera.lookAt(player.position.x, 0, -5);
+
+            renderer.render(scene, camera);
+        }
+
+        // Ajuste de tela
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        animate();
+    </script>
+</body>
+</html>
