@@ -2,146 +2,219 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>NEON RUNNER 3D - GAME</title>
+    <title>MINECRAFT JS EDITION</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', Courier, monospace; }
-        #ui { position: absolute; top: 20px; left: 20px; color: #0fb; font-size: 24px; text-shadow: 0 0 10px #0fb; pointer-events: none; }
-        #instructions { position: absolute; bottom: 20px; width: 100%; text-align: center; color: #0fb; font-size: 14px; opacity: 0.7; }
-        #game-over { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #f0f; font-size: 48px; text-align: center; text-shadow: 0 0 20px #f0f; }
+        body { margin: 0; overflow: hidden; background-color: #87CEEB; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        canvas { display: block; }
+        #crosshair {
+            position: absolute; top: 50%; left: 50%;
+            width: 20px; height: 20px;
+            transform: translate(-50%, -50%);
+            color: white; text-align: center; line-height: 20px;
+            font-size: 24px; pointer-events: none;
+        }
+        #ui {
+            position: absolute; bottom: 20px; left: 50%;
+            transform: translateX(-50%);
+            display: flex; gap: 10px; background: rgba(0,0,0,0.5);
+            padding: 10px; border-radius: 5px;
+        }
+        .slot {
+            width: 40px; height: 40px; border: 2px solid #555;
+            display: flex; align-items: center; justify-content: center; color: white;
+        }
+        .selected { border-color: white; background: rgba(255,255,255,0.2); }
+        #instructions {
+            position: absolute; top: 20px; width: 100%;
+            text-align: center; color: white; text-shadow: 1px 1px 2px black;
+        }
     </style>
 </head>
 <body>
 
-    <div id="ui">SCORE: <span id="score">0</span></div>
-    <div id="instructions">Use A e D ou SETAS para desviar</div>
-    <div id="game-over">GAME OVER<br><span style="font-size: 20px;">F5 PARA RECOMEÇAR</span></div>
+    <div id="instructions">CLIQUE NA TELA PARA JOGAR<br>WASD: Andar | ESPAÇO: Pular | CLIQUE ESQ: Quebrar | CLIQUE DIR: Colocar | 1-3: Blocos</div>
+    <div id="crosshair">+</div>
+    <div id="ui">
+        <div id="slot1" class="slot selected">G</div>
+        <div id="slot2" class="slot">D</div>
+        <div id="slot3" class="slot">S</div>
+    </div>
 
-    <!-- Importando Three.js de um servidor rápido (CDN) -->
     <script type="importmap">
         { "imports": { "three": "https://unpkg.com/three@0.160.0/build/three.module.js" } }
     </script>
 
     <script type="module">
         import * as THREE from 'three';
+        import { PointerLockControls } from 'https://unpkg.com/three@0.160.0/examples/jsm/controls/PointerLockControls.js';
 
-        // --- CONFIGURAÇÃO INICIAL ---
+        // --- CONFIGURAÇÃO ---
         const scene = new THREE.Scene();
-        scene.fog = new THREE.FogExp2(0x000000, 0.05); // Neblina para dar profundidade
+        scene.background = new THREE.Color(0x87CEEB);
+        scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
 
         const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: false }); // Antialias false para visual pixelado
         renderer.setSize(window.innerWidth, window.innerHeight);
         document.body.appendChild(renderer.domElement);
 
-        // --- JOGADOR ---
-        const playerGeo = new THREE.BoxGeometry(1, 1, 1);
-        const playerMat = new THREE.MeshPhongMaterial({ color: 0x00ffbb, emissive: 0x00ffbb, emissiveIntensity: 0.5 });
-        const player = new THREE.Mesh(playerGeo, playerMat);
-        player.position.y = 0.5;
-        scene.add(player);
+        const controls = new PointerLockControls(camera, document.body);
+        document.body.addEventListener('click', () => controls.lock());
 
-        // --- CHÃO (Pista) ---
-        const groundGeo = new THREE.PlaneGeometry(10, 1000);
-        const groundMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
-        const ground = new THREE.Mesh(groundGeo, groundMat);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.z = -450;
-        scene.add(ground);
-
-        // Grade para efeito visual de velocidade
-        const grid = new THREE.GridHelper(10, 100, 0x00ffbb, 0x222222);
-        grid.rotation.x = 0;
-        grid.position.z = 0;
-        scene.add(grid);
-        const grid2 = grid.clone(); // Segunda grade para loop infinito
-        grid2.position.z = -100;
-        scene.add(grid2);
-
-        // --- LUZES ---
-        const light = new THREE.PointLight(0x00ffbb, 20, 50);
-        light.position.set(0, 2, 2);
+        // --- ILUMINAÇÃO ---
+        const light = new THREE.AmbientLight(0xffffff, 1.5);
         scene.add(light);
-        scene.add(new THREE.AmbientLight(0x444444));
+        const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+        sun.position.set(10, 20, 10);
+        scene.add(sun);
 
-        // --- VARIÁVEIS DO JOGO ---
-        let score = 0;
-        let speed = 0.5;
-        let gameOver = false;
-        const obstacles = [];
-        const keys = { a: false, d: false, ArrowLeft: false, ArrowRight: false };
-
-        // --- CONTROLES ---
-        window.addEventListener('keydown', (e) => keys[e.key] = true);
-        window.addEventListener('keyup', (e) => keys[e.key] = false);
-
-        // Função para criar obstáculos
-        function spawnObstacle() {
-            if(gameOver) return;
-            const geo = new THREE.BoxGeometry(Math.random() * 2 + 1, 1, 1);
-            const mat = new THREE.MeshPhongMaterial({ color: 0xff00ff, emissive: 0xff00ff });
-            const obs = new THREE.Mesh(geo, mat);
-            obs.position.set((Math.random() - 0.5) * 8, 0.5, -100);
-            scene.add(obs);
-            obstacles.push(obs);
-            setTimeout(spawnObstacle, Math.max(200, 1000 - score));
+        // --- BLOCOS E MATERIAIS ---
+        const loader = new THREE.TextureLoader();
+        // Criando cores sólidas para simular texturas sem arquivos externos
+        function createBlockMat(color) {
+            return new THREE.MeshLambertMaterial({ color: color });
         }
-        spawnObstacle();
+
+        const blocks = {
+            1: { name: 'Grass', mat: createBlockMat(0x4d9043) },
+            2: { name: 'Dirt', mat: createBlockMat(0x8b5a2b) },
+            3: { name: 'Stone', mat: createBlockMat(0x808080) }
+        };
+        let selectedBlock = 1;
+
+        // --- MUNDO (Voxel Data) ---
+        const worldSize = 32;
+        const worldHeight = 16;
+        const voxels = new Map();
+
+        function getVoxelKey(x, y, z) { return `${x},${y},${z}`; }
+
+        const geometry = new THREE.BoxGeometry(1, 1, 1);
+
+        function addBlockToScene(x, y, z, type) {
+            const mesh = new THREE.Mesh(geometry, blocks[type].mat);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            voxels.set(getVoxelKey(x, y, z), mesh);
+        }
+
+        // Geração de Terreno Simples (Senoide para parecer colinas)
+        for(let x = -worldSize/2; x < worldSize/2; x++) {
+            for(let z = -worldSize/2; z < worldSize/2; z++) {
+                const h = Math.floor(Math.sin(x/5) * Math.cos(z/5) * 3 + 5);
+                for(let y = 0; y < h; y++) {
+                    let type = 3; // Pedra
+                    if (y === h - 1) type = 1; // Grama no topo
+                    else if (y > h - 3) type = 2; // Terra
+                    addBlockToScene(x, y, z, type);
+                }
+            }
+        }
+
+        camera.position.set(0, 10, 10);
+
+        // --- MOVIMENTAÇÃO ---
+        let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false, canJump = false;
+        const velocity = new THREE.Vector3();
+        const direction = new THREE.Vector3();
+
+        const onKeyDown = (e) => {
+            if(e.code === 'KeyW') moveForward = true;
+            if(e.code === 'KeyS') moveBackward = true;
+            if(e.code === 'KeyA') moveLeft = true;
+            if(e.code === 'KeyD') moveRight = true;
+            if(e.code === 'Space' && canJump) { velocity.y += 5; canJump = false; }
+            if(e.key === '1') selectSlot(1);
+            if(e.key === '2') selectSlot(2);
+            if(e.key === '3') selectSlot(3);
+        };
+        const onKeyUp = (e) => {
+            if(e.code === 'KeyW') moveForward = false;
+            if(e.code === 'KeyS') moveBackward = false;
+            if(e.code === 'KeyA') moveLeft = false;
+            if(e.code === 'KeyD') moveRight = false;
+        };
+        document.addEventListener('keydown', onKeyDown);
+        document.addEventListener('keyup', onKeyUp);
+
+        function selectSlot(n) {
+            selectedBlock = n;
+            document.querySelectorAll('.slot').forEach(s => s.classList.remove('selected'));
+            document.getElementById('slot' + n).classList.add('selected');
+        }
+
+        // --- INTERAÇÃO (QUEBRAR/COLOCAR) ---
+        const raycaster = new THREE.Raycaster();
+        const mouse = new THREE.Vector2(0, 0);
+
+        window.addEventListener('mousedown', (e) => {
+            if(!controls.isLocked) return;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObjects(scene.children);
+
+            if (intersects.length > 0) {
+                const intersect = intersects[0];
+                
+                if (e.button === 0) { // Clique Esquerdo: Quebrar
+                    scene.remove(intersect.object);
+                    const p = intersect.object.position;
+                    voxels.delete(getVoxelKey(p.x, p.y, p.z));
+                } 
+                else if (e.button === 2) { // Clique Direito: Colocar
+                    const pos = intersect.object.position.clone().add(intersect.face.normal);
+                    addBlockToScene(pos.x, pos.y, pos.z, selectedBlock);
+                }
+            }
+        });
+        window.addEventListener('contextmenu', e => e.preventDefault());
 
         // --- LOOP DE ANIMAÇÃO ---
+        let prevTime = performance.now();
         function animate() {
-            if (gameOver) return;
             requestAnimationFrame(animate);
 
-            // Movimento do jogador
-            if ((keys.a || keys.ArrowLeft) && player.position.x > -4.5) player.position.x -= 0.15;
-            if ((keys.d || keys.ArrowRight) && player.position.x < 4.5) player.position.x += 0.15;
+            const time = performance.now();
+            const delta = (time - prevTime) / 1000;
 
-            // Movimento do cenário (Grades)
-            grid.position.z += speed;
-            grid2.position.z += speed;
-            if (grid.position.z > 10) grid.position.z = grid2.position.z - 100;
-            if (grid2.position.z > 10) grid2.position.z = grid.position.z - 100;
+            if (controls.isLocked) {
+                // Gravidade e atrito
+                velocity.x -= velocity.x * 10.0 * delta;
+                velocity.z -= velocity.z * 10.0 * delta;
+                velocity.y -= 9.8 * 2.0 * delta; // Gravidade
 
-            // Obstáculos
-            for (let i = obstacles.length - 1; i >= 0; i--) {
-                obstacles[i].position.z += speed;
+                direction.z = Number(moveForward) - Number(moveBackward);
+                direction.x = Number(moveRight) - Number(moveLeft);
+                direction.normalize();
 
-                // Colisão (Hitbox simples)
-                const dX = Math.abs(player.position.x - obstacles[i].position.x);
-                const dZ = Math.abs(player.position.z - obstacles[i].position.z);
+                if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
+                if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
+
+                controls.moveRight(-velocity.x * delta);
+                controls.moveForward(-velocity.z * delta);
                 
-                if (dX < 1 && dZ < 0.8) {
-                    gameOver = true;
-                    document.getElementById('game-over').style.display = 'block';
-                }
+                camera.position.y += (velocity.y * delta);
 
-                // Remove obstáculos que passaram
-                if (obstacles[i].position.z > 5) {
-                    scene.remove(obstacles[i]);
-                    obstacles.splice(i, 1);
-                    score += 10;
-                    speed += 0.001; // Aumenta a dificuldade
-                    document.getElementById('score').innerText = score;
+                // Chão simples (colisão básica)
+                if (camera.position.y < 2) {
+                    velocity.y = 0;
+                    camera.position.y = 2;
+                    canJump = true;
                 }
             }
 
-            // Câmera segue levemente o jogador
-            camera.position.x += (player.position.x * 0.5 - camera.position.x) * 0.1;
-            camera.position.y = 2.5;
-            camera.position.z = 5;
-            camera.lookAt(player.position.x, 0, -5);
-
+            prevTime = time;
             renderer.render(scene, camera);
         }
 
-        // Ajuste de tela
+        animate();
+
+        // Ajuste de Janela
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         });
-
-        animate();
     </script>
 </body>
 </html>
