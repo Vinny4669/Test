@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ResenhaTale: Sans Mode 2.0 👀</title>
+    <title>ResenhaTale: Neon Edition 👀</title>
     <style>
         @font-face {
             font-family: 'Determination';
@@ -24,12 +24,20 @@
             user-select: none;
         }
 
+        /* INIMIGO */
+        #enemy-container { height: 180px; text-align: center; }
+        #enemy-img { width: 120px; transition: filter 0.1s, opacity 0.5s; }
+        .enemy-hp-bar { width: 160px; height: 12px; background: #333; border: 2px solid white; margin: 10px auto; }
+        #enemy-hp-fill { width: 100%; height: 100%; background: #00ff00; transition: 0.3s; }
+
+        /* CAIXA DE BATALHA */
         #box {
             width: 400px; height: 180px;
             border: 5px solid white;
             position: relative;
             background: black;
             overflow: hidden;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.1);
         }
 
         #soul {
@@ -37,42 +45,54 @@
             display: none; z-index: 100;
         }
 
-        /* Classes de Ataque */
-        .attack-obj { position: absolute; pointer-events: none; }
-        .bullet { background: white; }
-        .orange { background: #ffa500 !important; }
-        .blue { background: #008cff !important; }
+        /* EFEITOS NEON E ATAQUES */
+        .attack-obj { position: absolute; pointer-events: none; box-sizing: border-box; }
         
-        /* O Laser Giratório Duplo */
+        /* Paredes Neon */
+        .blue { 
+            background: #008cff; 
+            box-shadow: 0 0 20px #008cff, 0 0 40px #008cff;
+            border: 1px solid white;
+        }
+        .orange { 
+            background: #ffa500; 
+            box-shadow: 0 0 20px #ffa500, 0 0 40px #ffa500;
+            border: 1px solid white;
+        }
+
+        /* Laser Giratório */
         #rotating-beam {
             position: absolute;
             left: 50%; top: 50%;
             width: 600px; height: 30px;
-            background: rgba(255, 255, 255, 0.2); /* Começa transparente */
             transform: translate(-50%, -50%) rotate(0deg);
             display: none;
             z-index: 50;
         }
-
-        .blaster-warning { background: rgba(255, 255, 255, 0.1); border: 1px dashed white; }
-
-        /* UI */
-        #status { width: 400px; margin: 15px 0; display: flex; align-items: center; font-size: 20px;}
-        .hp-bar-bg { width: 100px; height: 20px; background: red; margin: 0 10px; }
-        #hp-fill { width: 100%; height: 100%; background: #ffff00; }
-        .buttons { display: flex; gap: 10px; width: 420px; justify-content: space-between; }
-        .btn { border: 2px solid #e27d31; color: #e27d31; padding: 8px; width: 95px; text-align: center; cursor: pointer; }
-        .btn:hover { border-color: white; color: white; background: #e27d31; }
-
-        #game-over {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: black; display: none; flex-direction: column;
-            align-items: center; justify-content: center; z-index: 1000;
+        .beam-warning { border: 2px dashed white; background: rgba(255,255,255,0.1); }
+        .beam-active { 
+            background: white; 
+            box-shadow: 0 0 30px white, 0 0 60px #00ff88; 
+            border: none;
         }
 
+        /* Avisos de Slam */
+        .blaster-warning { border: 2px dashed white; background: rgba(255, 255, 255, 0.1); }
+        .spike-attack { background: white; box-shadow: 0 0 20px white; }
+
+        /* UI */
+        #status { width: 400px; margin: 15px 0; display: flex; align-items: center; font-size: 20px; }
+        .hp-bar-bg { width: 100px; height: 20px; background: red; margin: 0 10px; }
+        #hp-fill { width: 100%; height: 100%; background: #ffff00; box-shadow: 0 0 10px #ffff00; }
+
+        .buttons { display: flex; gap: 10px; width: 420px; justify-content: space-between; }
+        .btn { border: 2px solid #e27d31; color: #e27d31; padding: 8px; width: 95px; text-align: center; cursor: pointer; transition: 0.2s; }
+        .btn:hover { border-color: white; color: white; background: #e27d31; box-shadow: 0 0 10px #e27d31; }
+
+        /* ATAQUE SLIDER */
         #attack-ui {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center;
         }
         #slider-container {
             width: 380px; height: 120px;
@@ -80,16 +100,20 @@
             background-size: 100% 100%;
             position: relative;
         }
-        #slider-line { position: absolute; width: 8px; height: 100%; background: white; left: 0; }
+        #slider-line { position: absolute; width: 8px; height: 100%; background: white; box-shadow: 0 0 15px white; left: 0; }
+
+        #game-over {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; display: none; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 1000;
+        }
     </style>
 </head>
 <body>
 
-    <div style="height: 180px; text-align: center;">
-        <img src="resenha.png" id="enemy-img" style="width: 120px;" onerror="this.src='https://emojicdn.elk.sh/👀?size=120'">
-        <div style="width: 160px; height: 10px; background: #333; border: 2px solid white; margin: 10px auto;">
-            <div id="enemy-hp-fill" style="width: 100%; height: 100%; background: #00ff00;"></div>
-        </div>
+    <div id="enemy-container">
+        <img src="resenha.png" id="enemy-img" alt="👀" onerror="this.src='https://emojicdn.elk.sh/👀?size=120'">
+        <div class="enemy-hp-bar"><div id="enemy-hp-fill"></div></div>
     </div>
 
     <div id="box">
@@ -103,19 +127,20 @@
     </div>
 
     <div id="status">
-        PLAYER HP <div class="hp-bar-bg"><div id="hp-fill"></div></div> <span id="hp-text">50 / 50</span>
+        PLAYER  HP <div class="hp-bar-bg"><div id="hp-fill"></div></div> <span id="hp-text">50 / 50</span>
     </div>
 
     <div class="buttons">
         <div class="btn" onclick="startAttackMenu()">LUTAR</div>
-        <div class="btn" onclick="openMsg('* A resenha te julga.')">AGIR</div>
+        <div class="btn" onclick="openMsg('* Você checa a Resenha.')">AGIR</div>
         <div class="btn" onclick="useItem()">ITEM</div>
         <div class="btn" onclick="openMsg('* Sem piedade.')">POUPAR</div>
     </div>
 
     <div id="game-over">
-        <h1 style="color:red;">VOCÊ MORREU.</h1>
-        <button onclick="location.reload()" style="color:white; background:none; border:2px solid white; padding:10px;">TENTAR DE NOVO</button>
+        <h1 style="color:red; font-size: 40px;">FIM DE JOGO</h1>
+        <p style="color:white;">Mantenha sua determinação...</p>
+        <button onclick="location.reload()" style="background:none; border:2px solid white; color:white; padding:10px; cursor:pointer; font-family: 'Determination';">TENTAR DENOVO</button>
     </div>
 
     <script>
@@ -130,17 +155,23 @@
 
         let playerHp = 50, maxHp = 50;
         let enemyHp = 150, maxEnemyHp = 150;
-        let gameState = 'menu'; 
+        let gameState = 'typing'; // Começa em typing para o diálogo inicial
         let soulX = 192, soulY = 82;
         let keys = {};
         let isMoving = false;
         let activeIntervals = [];
+
+        // Inicialização
+        window.onload = () => {
+            typeWriter("* A resenha 👀 te encara silenciosamente.\n* O ar está frio.");
+        };
 
         function clearAllAttacks() {
             document.querySelectorAll('.attack-obj:not(#rotating-beam)').forEach(el => el.remove());
             activeIntervals.forEach(clearInterval);
             activeIntervals = [];
             rotatingBeam.style.display = 'none';
+            rotatingBeam.className = 'attack-obj';
             soul.style.filter = "none";
         }
 
@@ -163,7 +194,7 @@
             typeWriter(msg, startEnemyTurn);
         }
 
-        // --- SISTEMA DE ATAQUE JOGADOR ---
+        // --- ATAQUE DO JOGADOR ---
         let sliderPos = 0, sliderActive = false;
         function startAttackMenu() {
             if (gameState !== 'menu') return;
@@ -186,13 +217,15 @@
             sliderActive = false;
             document.getElementById('attack-ui').style.display = 'none';
             let dist = Math.abs(190 - pos);
-            let dmg = dist < 20 ? 25 : (dist < 80 ? 10 : 0);
+            let dmg = dist < 25 ? 25 : (dist < 90 ? 12 : 0);
             enemyHp -= dmg;
-            enemyHpFill.style.width = (enemyHp/maxEnemyHp*100) + "%";
-            typeWriter(`* Dano: ${dmg}`, () => { if (enemyHp <= 0) win(); else startEnemyTurn(); });
+            enemyHpFill.style.width = Math.max(0, (enemyHp/maxEnemyHp*100)) + "%";
+            typeWriter(`* Você desferiu ${dmg} de dano!`, () => {
+                if (enemyHp <= 0) win(); else startEnemyTurn();
+            });
         }
 
-        // --- TURNOS DA RESENHA ---
+        // --- ATAQUES DO INIMIGO ---
         function startEnemyTurn() {
             clearAllAttacks();
             gameState = 'enemy_turn';
@@ -200,103 +233,98 @@
             soul.style.display = 'block';
             soulX = 192; soulY = 82;
             
-            const attacks = [rotatingBlasterAttack, gravitySlam, attackWalls];
+            const attacks = [rotatingBeamAttack, gravitySlamAttack, neonWallAttack];
             attacks[Math.floor(Math.random() * attacks.length)]();
             
-            const turnEnd = setTimeout(endTurn, 8000);
-            activeIntervals.push(turnEnd);
+            activeIntervals.push(setTimeout(endTurn, 8500));
         }
 
-        // 1. GASTER BLASTER ROTATIVO DUPLO (REFEITO)
-        function rotatingBlasterAttack() {
+        // 1. LASER GIRATÓRIO NEON
+        function rotatingBeamAttack() {
             rotatingBeam.style.display = 'block';
-            rotatingBeam.style.background = 'rgba(255,255,255,0.2)'; // Cor de aviso
+            rotatingBeam.classList.add('beam-warning');
             let angle = 0;
             let lethal = false;
 
-            // Fase de aviso
             setTimeout(() => {
                 lethal = true;
-                rotatingBeam.style.background = 'white';
-                rotatingBeam.style.boxShadow = '0 0 20px white';
-            }, 1200);
+                rotatingBeam.classList.remove('beam-warning');
+                rotatingBeam.classList.add('beam-active');
+            }, 1500);
 
             const rotate = setInterval(() => {
-                angle += 4; // Mais rápido
+                angle += 4.5;
                 rotatingBeam.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
-                
                 if (lethal) {
-                    // MATEMÁTICA DE COLISÃO PRECISA
-                    // Centro da caixa: 200, 90. Alma: soulX+8, soulY+8
                     let cx = 200, cy = 90;
                     let sx = soulX + 8, sy = soulY + 8;
-                    
-                    // Distância da alma até a linha do laser
                     let rad = angle * (Math.PI / 180);
-                    let distToLine = Math.abs((sx - cx) * Math.sin(rad) - (sy - cy) * Math.cos(rad));
-                    
-                    if (distToLine < 18) takeDamage(1.5);
+                    let dist = Math.abs((sx - cx) * Math.sin(rad) - (sy - cy) * Math.cos(rad));
+                    if (dist < 18) takeDamage(1.5);
                 }
             }, 20);
             activeIntervals.push(rotate);
         }
 
-        // 2. GRAVITY SLAM
-        function gravitySlam() {
-            soul.style.filter = "hue-rotate(150deg)";
-            let count = 0;
+        // 2. PAREDES NEON AZUL/LARANJA (CORRIGIDO)
+        function neonWallAttack() {
+            const pattern = setInterval(() => {
+                let type = Math.random() > 0.5 ? 'blue' : 'orange';
+                const wall = document.createElement('div');
+                wall.className = 'attack-obj ' + type;
+                wall.style.width = '35px'; wall.style.height = '180px';
+                wall.style.left = '400px'; wall.style.top = '0';
+                box.appendChild(wall);
+
+                let wx = 400;
+                const m = setInterval(() => {
+                    wx -= 7;
+                    wall.style.left = wx + 'px';
+                    
+                    // Colisão com margem de segurança (10px)
+                    if (wx < soulX + 10 && wx + 25 > soulX) {
+                        if (type === 'blue' && isMoving) takeDamage(3);
+                        if (type === 'orange' && !isMoving) takeDamage(3);
+                    }
+                    if (wx < -50) { wall.remove(); clearInterval(m); }
+                }, 20);
+            }, 1000);
+            activeIntervals.push(pattern);
+        }
+
+        // 3. SLAM DE GRAVIDADE
+        function gravitySlamAttack() {
+            soul.style.filter = "hue-rotate(150deg) drop-shadow(0 0 5px #008cff)";
+            let slams = 0;
             const slam = setInterval(() => {
-                if (count++ >= 5) return clearInterval(slam);
-                const dirs = ['t', 'b', 'l', 'r'];
-                const d = dirs[Math.floor(Math.random() * 4)];
+                if (slams++ >= 5) return clearInterval(slam);
+                const d = ['t','b','l','r'][Math.floor(Math.random()*4)];
                 if(d==='t') soulY=0; if(d==='b') soulY=164; if(d==='l') soulX=0; if(d==='r') soulX=384;
                 
                 const warn = document.createElement('div');
                 warn.className = 'attack-obj blaster-warning';
-                if(d==='t'||d==='b'){ warn.style.width='400px'; warn.style.height='35px'; warn.style.left='0'; warn.style.top=(d==='t'?'0':'145px'); }
-                else { warn.style.width='35px'; warn.style.height='180px'; warn.style.top='0'; warn.style.left=(d==='l'?'0':'365px'); }
+                if(d==='t'||d==='b'){ warn.style.width='400px'; warn.style.height='40px'; warn.style.left='0'; warn.style.top=(d==='t'?'0':'140px'); }
+                else { warn.style.width='40px'; warn.style.height='180px'; warn.style.top='0'; warn.style.left=(d==='l'?'0':'360px'); }
                 box.appendChild(warn);
 
                 setTimeout(() => {
                     warn.remove();
                     const spike = document.createElement('div');
-                    spike.className = 'attack-obj bullet';
+                    spike.className = 'attack-obj spike-attack';
                     spike.style.width=warn.style.width; spike.style.height=warn.style.height;
                     spike.style.left=warn.style.left; spike.style.top=warn.style.top;
                     box.appendChild(spike);
-                    if (checkCollision(soul, spike)) takeDamage(12);
+                    if (checkCollision(soul, spike)) takeDamage(15);
                     setTimeout(() => spike.remove(), 400);
-                }, 750);
-            }, 1300);
+                }, 800);
+            }, 1400);
             activeIntervals.push(slam);
-        }
-
-        // 3. PAREDES
-        function attackWalls() {
-            const int = setInterval(() => {
-                let type = Math.random() > 0.5 ? 'blue' : 'orange';
-                const wall = document.createElement('div');
-                wall.className = 'attack-obj bullet ' + type;
-                wall.style.width = '35px'; wall.style.height = '180px';
-                wall.style.left = '400px'; wall.style.top = '0';
-                box.appendChild(wall);
-                let wx = 400;
-                const m = setInterval(() => {
-                    wx -= 7; wall.style.left = wx + 'px';
-                    if (checkCollision(soul, wall)) {
-                        if (type === 'blue' && isMoving) takeDamage(3);
-                        if (type === 'orange' && !isMoving) takeDamage(3);
-                    }
-                    if (wx < -40) { wall.remove(); clearInterval(m); }
-                }, 20);
-            }, 900);
-            activeIntervals.push(int);
         }
 
         function checkCollision(el1, el2) {
             const r1 = el1.getBoundingClientRect();
             const r2 = el2.getBoundingClientRect();
-            return !(r1.right < r2.left || r1.left > r2.right || r1.bottom < r2.top || r1.top > r2.bottom);
+            return !(r1.right < r2.left + 5 || r1.left > r2.right - 5 || r1.bottom < r2.top + 5 || r1.top > r2.bottom - 5);
         }
 
         function takeDamage(amt) {
@@ -310,11 +338,11 @@
             clearAllAttacks();
             gameState = 'menu';
             soul.style.display = 'none';
-            typeWriter("* A resenha não para.");
+            typeWriter("* A resenha 👀 parece estar se divertindo.");
         }
 
-        function die() { clearAllAttacks(); document.getElementById('game-over').style.display = 'flex'; }
-        function win() { clearAllAttacks(); typeWriter("* VOCÊ VENCEU!"); }
+        function die() { clearAllAttacks(); gameState='dead'; document.getElementById('game-over').style.display = 'flex'; }
+        function win() { clearAllAttacks(); typeWriter("* VOCÊ VENCEU!"); document.getElementById('enemy-img').style.opacity='0'; }
 
         // CONTROLES
         window.addEventListener('keydown', e => { keys[e.key] = true; isMoving = true; });
@@ -342,7 +370,7 @@
             playerHp = 50;
             hpFill.style.width = "100%";
             hpText.innerText = "50 / 50";
-            typeWriter("* HP Restaurado!", startEnemyTurn);
+            typeWriter("* Tomou Sucu do Istilitiru. HP FULL!", startEnemyTurn);
         }
     </script>
 </body>
