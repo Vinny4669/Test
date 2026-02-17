@@ -3,17 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ResenhaTale 👀</title>
+    <title>ResenhaTale 👀 - Battle System</title>
     <style>
-        @font-face {
-            font-family: 'Determination';
-            src: url('https://fonts.cdnfonts.com/s/15443/DeterminationMonoWebRegular.woff') format('woff');
-        }
-
         body {
             background-color: black;
             color: white;
-            font-family: 'Courier New', monospace;
+            font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -28,18 +23,22 @@
         #enemy-container {
             height: 180px;
             text-align: center;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
         }
 
         #enemy-img {
             width: 120px;
-            animation: shake 0.5s infinite alternate;
+            transition: 0.1s;
         }
 
-        @keyframes shake {
-            from { transform: translateX(-5px); }
-            to { transform: translateX(5px); }
+        .enemy-hp-container {
+            width: 150px;
+            height: 10px;
+            background: #333;
+            margin: 5px auto;
+            border: 1px solid white;
         }
+        #enemy-hp-fill { width: 100%; height: 100%; background: #00ff00; transition: 0.3s; }
 
         /* Caixa de Batalha */
         #box {
@@ -53,7 +52,6 @@
             overflow: hidden;
         }
 
-        /* A Alma (Coração) */
         #soul {
             position: absolute;
             width: 16px;
@@ -62,54 +60,46 @@
             z-index: 100;
         }
 
-        /* Projétil do Ataque */
-        .bullet {
-            position: absolute;
-            background: white;
-            width: 10px;
-            height: 10px;
-        }
+        .bullet { position: absolute; background: white; pointer-events: none; }
 
-        /* Status Bar */
+        /* Barra de Status */
         #status {
             width: 400px;
             margin: 15px 0;
             display: flex;
             align-items: center;
-            font-weight: bold;
-        }
-
-        .hp-bar-bg { width: 100px; height: 18px; background: red; margin: 0 10px; }
-        #hp-fill { width: 100%; height: 100%; background: #ffff00; transition: 0.2s; }
-
-        /* Botões de Menu */
-        .buttons {
-            display: flex;
-            gap: 10px;
-            width: 410px;
-            justify-content: space-between;
-        }
-
-        .btn {
-            border: 2px solid #e27d31;
-            color: #e27d31;
-            padding: 8px;
-            width: 90px;
-            text-align: center;
-            cursor: pointer;
             font-size: 14px;
         }
 
-        .btn.active { border-color: white; color: white; background: #e27d31; }
+        .hp-bar-bg { width: 80px; height: 18px; background: red; margin: 0 10px; }
+        #hp-fill { width: 100%; height: 100%; background: #ffff00; }
+        .poisoned { background: #800080 !important; } /* Cor roxa para veneno */
 
-        #dialogue { font-size: 18px; line-height: 1.4; }
+        /* Botões */
+        .buttons { display: flex; gap: 8px; width: 410px; justify-content: space-between; }
+        .btn {
+            border: 2px solid #e27d31;
+            color: #e27d31;
+            padding: 6px;
+            width: 90px;
+            text-align: center;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        .btn:hover { background: #e27d31; color: white; }
+
+        #dialogue { font-size: 16px; line-height: 1.4; white-space: pre-wrap; }
+        .item-list { list-style: none; padding: 0; margin: 0; }
+        .item-list li { cursor: pointer; padding: 2px; }
+        .item-list li:hover { background: white; color: black; }
     </style>
 </head>
 <body>
 
     <div id="enemy-container">
         <img src="resenha.png" id="enemy-img" alt="👀" onerror="this.src='https://emojicdn.elk.sh/👀?size=120'">
-        <p>Inimigo: Resenha 👀</p>
+        <div class="enemy-hp-container"><div id="enemy-hp-fill"></div></div>
+        <p id="enemy-label">RESENHA 👀</p>
     </div>
 
     <div id="box">
@@ -118,146 +108,236 @@
     </div>
 
     <div id="status">
-        PLAYER  LV 19  HP <div class="hp-bar-bg"><div id="hp-fill"></div></div> <span id="hp-text">20 / 20</span>
+        VOCÊ  LV 19  HP <div class="hp-bar-bg"><div id="hp-fill"></div></div> <span id="hp-text">20 / 20</span>
     </div>
 
     <div class="buttons">
-        <div class="btn" onclick="playerAction('fight')">LUTAR</div>
-        <div class="btn" onclick="playerAction('act')">AGIR</div>
-        <div class="btn" onclick="playerAction('item')">ITEM</div>
-        <div class="btn" onclick="playerAction('mercy')">POUPAR</div>
+        <div class="btn" onclick="menuAction('fight')">LUTAR</div>
+        <div class="btn" onclick="menuAction('act')">AGIR</div>
+        <div class="btn" onclick="menuAction('item')">ITEM</div>
+        <div class="btn" onclick="menuAction('mercy')">POUPAR</div>
     </div>
 
     <script>
-        const box = document.getElementById('box');
         const dialogue = document.getElementById('dialogue');
         const soul = document.getElementById('soul');
         const hpFill = document.getElementById('hp-fill');
         const hpText = document.getElementById('hp-text');
+        const enemyHpFill = document.getElementById('enemy-hp-fill');
+        const box = document.getElementById('box');
 
-        let hp = 20;
-        let maxHp = 20;
-        let gameState = 'menu'; // menu, attacking, enemyTurn
+        let playerHp = 20, maxHp = 20;
+        let enemyHp = 100, maxEnemyHp = 100;
+        let gameState = 'menu'; // menu, typing, item_select, enemy_turn, win
         let soulX = 192, soulY = 72;
         let keys = {};
+        let currentAttack = 0;
+        let poisonTicks = 0;
 
-        // Sons/Efeitos simples de diálogo
-        function typeWriter(text) {
+        // Inventário
+        let inventory = [
+            { name: "Sucu do Istilitiru", heal: 25, msg: "* Você tomou o Sucu...\n* Sentiu o poder do estilo!" },
+            { name: "Chocolate", heal: 15, msg: "* Você comeu o chocolate.\n* Gosto de nostalgia." },
+            { name: "Bosta", heal: -5, poison: 5, msg: "* Por que você comeu isso?\n* Você se sente péssimo (Veneno!)" }
+        ];
+
+        function typeWriter(text, nextState = 'menu', callback = null) {
+            gameState = 'typing';
             dialogue.innerHTML = "";
             let i = 0;
-            gameState = 'typing';
             const interval = setInterval(() => {
-                dialogue.innerHTML += text.charAt(i) === '\n' ? '<br>' : text.charAt(i);
+                dialogue.innerHTML += text.charAt(i);
                 i++;
                 if (i >= text.length) {
                     clearInterval(interval);
-                    gameState = 'menu';
+                    gameState = nextState;
+                    if (callback) callback();
                 }
             }, 30);
         }
 
-        typeWriter("* O ar está pesado...\n* A resenha começou.");
+        typeWriter("* A resenha te encara fixamente.");
 
-        function playerAction(type) {
+        function menuAction(action) {
             if (gameState !== 'menu') return;
 
-            if (type === 'fight') {
-                typeWriter("* Você ataca! Mas a resenha é forte demais...");
-                setTimeout(startEnemyTurn, 2000);
-            } else if (type === 'act') {
-                typeWriter("* Você contou uma piada.\n* A resenha achou graça.");
+            if (action === 'fight') {
+                enemyHp -= 20;
+                updateEnemyHp();
+                typeWriter("* Você ataca com tudo!\n* A resenha perdeu 20 HP.", 'typing', () => {
+                    setTimeout(checkWinCondition, 1500);
+                });
+            } else if (action === 'item') {
+                showItems();
+            } else if (action === 'act') {
+                typeWriter("* Você tenta explicar a resenha.\n* Ninguém entendeu nada.");
                 setTimeout(startEnemyTurn, 2000);
             } else {
-                typeWriter("* Não é hora de usar isso!");
+                typeWriter("* A resenha não aceita misericórdia.");
+                setTimeout(startEnemyTurn, 2000);
             }
         }
 
+        function showItems() {
+            if (inventory.length === 0) {
+                typeWriter("* Você não tem nada.");
+                return;
+            }
+            gameState = 'item_select';
+            dialogue.innerHTML = "<ul class='item-list'>";
+            inventory.forEach((item, index) => {
+                dialogue.innerHTML += `<li onclick="useItem(${index})">${item.name}</li>`;
+            });
+            dialogue.innerHTML += "</ul>";
+        }
+
+        function useItem(index) {
+            const item = inventory[index];
+            playerHp += item.heal;
+            if (item.poison) poisonTicks = item.poison;
+            
+            inventory.splice(index, 1);
+            updatePlayerHp();
+            
+            typeWriter(item.msg, 'typing', () => {
+                setTimeout(startEnemyTurn, 2000);
+            });
+        }
+
+        function updateEnemyHp() {
+            const perc = (enemyHp / maxEnemyHp) * 100;
+            enemyHpFill.style.width = Math.max(0, perc) + "%";
+            document.getElementById('enemy-img').style.filter = "invert(1) sepia(1) saturate(5) hue-rotate(300deg)";
+            setTimeout(() => document.getElementById('enemy-img').style.filter = "none", 150);
+        }
+
+        function updatePlayerHp() {
+            if (playerHp > maxHp) playerHp = maxHp;
+            const perc = (playerHp / maxHp) * 100;
+            hpFill.style.width = Math.max(0, perc) + "%";
+            hpText.innerText = `${Math.floor(playerHp)} / ${maxHp}`;
+            
+            if (poisonTicks > 0) hpFill.classList.add('poisoned');
+            else hpFill.classList.remove('poisoned');
+
+            if (playerHp <= 0) {
+                alert("GAME OVER - A resenha foi longe demais.");
+                location.reload();
+            }
+        }
+
+        function checkWinCondition() {
+            if (enemyHp <= 0) {
+                gameState = 'win';
+                document.getElementById('enemy-img').style.opacity = "0";
+                typeWriter("* VOCÊ VENCEU A RESENHA!\n* O mundo está a salvo do tédio.", 'win');
+            } else {
+                startEnemyTurn();
+            }
+        }
+
+        // Sistema de Ataques
         function startEnemyTurn() {
-            gameState = 'enemyTurn';
+            gameState = 'enemy_turn';
             dialogue.innerHTML = "";
             soul.style.display = 'block';
             soulX = 192; soulY = 72;
-            updateSoulPos();
+            
+            currentAttack = Math.floor(Math.random() * 3);
+            let duration = 5000;
 
-            // Criar projéteis
-            let attackCount = 0;
-            const attackInterval = setInterval(() => {
-                createBullet();
-                attackCount++;
-                if (attackCount > 15) {
-                    clearInterval(attackInterval);
-                    setTimeout(endEnemyTurn, 2000);
+            const attackTimer = setTimeout(() => {
+                endEnemyTurn();
+            }, duration);
+
+            runAttackPattern(currentAttack);
+        }
+
+        function runAttackPattern(id) {
+            if (gameState !== 'enemy_turn') return;
+
+            if (id === 0) { // Chuva de Resenha
+                const int = setInterval(() => {
+                    if (gameState !== 'enemy_turn') clearInterval(int);
+                    createBullet(Math.random() * 380, -20, 0, 4, 10, 10);
+                }, 300);
+            } else if (id === 1) { // Ataque Lateral (Barras)
+                const int = setInterval(() => {
+                    if (gameState !== 'enemy_turn') clearInterval(int);
+                    createBullet(-20, Math.random() * 140, 5, 0, 40, 10);
+                }, 600);
+            } else { // Círculo Explosivo
+                for (let i = 0; i < 8; i++) {
+                    let angle = (i / 8) * Math.PI * 2;
+                    createBullet(192, 72, Math.cos(angle) * 3, Math.sin(angle) * 3, 15, 15);
                 }
-            }, 400);
+            }
+        }
+
+        function createBullet(x, y, vx, vy, w, h) {
+            const b = document.createElement('div');
+            b.className = 'bullet';
+            b.style.width = w + 'px';
+            b.style.height = h + 'px';
+            b.style.left = x + 'px';
+            b.style.top = y + 'px';
+            box.appendChild(b);
+
+            const move = setInterval(() => {
+                x += vx; y += vy;
+                b.style.left = x + 'px';
+                b.style.top = y + 'px';
+
+                // Colisão simples
+                if (x < soulX + 12 && x + w > soulX && y < soulY + 12 && y + h > soulY) {
+                    playerHp -= 1;
+                    updatePlayerHp();
+                    b.remove();
+                    clearInterval(move);
+                }
+
+                if (x < -50 || x > 450 || y < -50 || y > 200) {
+                    b.remove();
+                    clearInterval(move);
+                }
+                if (gameState !== 'enemy_turn') { b.remove(); clearInterval(move); }
+            }, 20);
         }
 
         function endEnemyTurn() {
             gameState = 'menu';
             soul.style.display = 'none';
-            typeWriter("* Resenha 👀 parece estar te observando.");
+            typeWriter("* A resenha prepara algo novo...");
         }
 
-        // Movimentação da Alma
+        // Loop de Veneno e Movimentação
+        setInterval(() => {
+            if (poisonTicks > 0) {
+                playerHp -= 0.5;
+                poisonTicks -= 0.1;
+                updatePlayerHp();
+            }
+        }, 1000);
+
         window.addEventListener('keydown', e => keys[e.key] = true);
         window.addEventListener('keyup', e => keys[e.key] = false);
 
-        function updateSoulPos() {
-            if (gameState !== 'enemyTurn') return;
-            const speed = 3;
-            if (keys['ArrowUp'] || keys['w']) soulY -= speed;
-            if (keys['ArrowDown'] || keys['s']) soulY += speed;
-            if (keys['ArrowLeft'] || keys['a']) soulX -= speed;
-            if (keys['ArrowRight'] || keys['d']) soulX += speed;
+        function gameLoop() {
+            if (gameState === 'enemy_turn') {
+                const speed = 3;
+                if (keys['ArrowUp'] || keys['w']) soulY -= speed;
+                if (keys['ArrowDown'] || keys['s']) soulY += speed;
+                if (keys['ArrowLeft'] || keys['a']) soulX -= speed;
+                if (keys['ArrowRight'] || keys['d']) soulX += speed;
 
-            // Limites da caixa
-            soulX = Math.max(5, Math.min(375, soulX));
-            soulY = Math.max(5, Math.min(135, soulY));
-
-            soul.style.left = soulX + 'px';
-            soul.style.top = soulY + 'px';
-            requestAnimationFrame(updateSoulPos);
-        }
-
-        function createBullet() {
-            if (gameState !== 'enemyTurn') return;
-            const bullet = document.createElement('div');
-            bullet.className = 'bullet';
-            let bX = Math.random() * 380;
-            let bY = 0;
-            bullet.style.left = bX + 'px';
-            box.appendChild(bullet);
-
-            const bInt = setInterval(() => {
-                bY += 4;
-                bullet.style.top = bY + 'px';
-
-                // Colisão
-                let dist = Math.hypot((bX - soulX), (bY - soulY));
-                if (dist < 15) {
-                    takeDamage();
-                    bullet.remove();
-                    clearInterval(bInt);
-                }
-
-                if (bY > 160) {
-                    bullet.remove();
-                    clearInterval(bInt);
-                }
-            }, 20);
-        }
-
-        function takeDamage() {
-            hp -= 1;
-            if (hp < 0) hp = 0;
-            hpFill.style.width = (hp / maxHp * 100) + '%';
-            hpText.innerText = hp + " / " + maxHp;
-            if (hp <= 0) {
-                alert("GAME OVER - A resenha te consumiu.");
-                location.reload();
+                soulX = Math.max(0, Math.min(384, soulX));
+                soulY = Math.max(0, Math.min(144, soulY));
+                soul.style.left = soulX + 'px';
+                soul.style.top = soulY + 'px';
             }
+            requestAnimationFrame(gameLoop);
         }
-
-        requestAnimationFrame(updateSoulPos);
+        gameLoop();
     </script>
 </body>
 </html>
