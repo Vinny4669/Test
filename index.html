@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resenha Clicker 👀</title>
+    <style>
+        body {
+            background-color: #121212;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        .container {
+            text-align: center;
+        }
+
+        h1 { margin-bottom: 10px; color: #00ff88; }
+        
+        #score-container {
+            font-size: 2rem;
+            margin-bottom: 20px;
+        }
+
+        /* Área da Imagem Clicker */
+        #click-area {
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        #click-area:active {
+            transform: scale(0.95);
+        }
+
+        #resenha-img {
+            width: 200px;
+            height: 200px;
+            object-fit: contain;
+            filter: drop-shadow(0 0 10px #00ff88);
+        }
+
+        /* Loja de Upgrades */
+        .shop {
+            margin-top: 30px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .upgrade-btn {
+            background: #1e1e1e;
+            border: 2px solid #333;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        .upgrade-btn:hover:not(:disabled) {
+            border-color: #00ff88;
+            background: #252525;
+        }
+
+        .upgrade-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .stats {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Resenha Clicker 👀</h1>
+        <div id="score-container">
+            <span id="score">0</span> Pontos de Resenha
+        </div>
+
+        <div id="click-area" onclick="handleMainClick(event)">
+            <!-- Se o arquivo resenha.png não existir, ele mostra o emoji de reserva -->
+            <img src="resenha.png" id="resenha-img" alt="👀" onerror="this.src='https://emojicdn.elk.sh/👀?size=200'">
+        </div>
+
+        <div class="stats">
+            Ganho por clique: <span id="per-click">1</span> | Automático: <span id="per-sec">0</span>/s
+        </div>
+
+        <div class="shop">
+            <button class="upgrade-btn" id="up1" onclick="buyUpgrade(1)">
+                📱 Grupo de Zap (+1 p/ clique)<br>Custo: <span id="cost1">10</span>
+            </button>
+            <button class="upgrade-btn" id="up2" onclick="buyUpgrade(2)">
+                🔊 Caixa de Som (+1 p/ seg)<br>Custo: <span id="cost2">50</span>
+            </button>
+            <button class="upgrade-btn" id="up3" onclick="buyUpgrade(3)">
+                🥩 Churrasqueiro (+10 p/ seg)<br>Custo: <span id="cost3">250</span>
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let score = 0;
+        let pointsPerClick = 1;
+        let pointsPerSecond = 0;
+
+        let costs = { 1: 10, 2: 50, 3: 250 };
+        let amounts = { 1: 0, 2: 0, 3: 0 };
+
+        function updateDisplay() {
+            document.getElementById('score').innerText = Math.floor(score);
+            document.getElementById('per-click').innerText = pointsPerClick;
+            document.getElementById('per-sec').innerText = pointsPerSecond;
+            
+            // Ativar/Desativar botões da loja
+            for (let i = 1; i <= 3; i++) {
+                let btn = document.getElementById('up' + i);
+                btn.disabled = score < costs[i];
+                document.getElementById('cost' + i).innerText = costs[i];
+            }
+        }
+
+        function handleMainClick(event) {
+            score += pointsPerClick;
+            createFloatingText(event.clientX, event.clientY, "+" + pointsPerClick);
+            updateDisplay();
+        }
+
+        function buyUpgrade(id) {
+            if (score >= costs[id]) {
+                score -= costs[id];
+                amounts[id]++;
+                
+                if (id === 1) pointsPerClick += 1;
+                if (id === 2) pointsPerSecond += 1;
+                if (id === 3) pointsPerSecond += 10;
+
+                costs[id] = Math.ceil(costs[id] * 1.5);
+                updateDisplay();
+            }
+        }
+
+        // Sistema de pontos automáticos
+        setInterval(() => {
+            if (pointsPerSecond > 0) {
+                score += pointsPerSecond / 10; // Atualiza a cada 100ms para suavidade
+                updateDisplay();
+            }
+        }, 100);
+
+        // Efeito visual de texto subindo ao clicar
+        function createFloatingText(x, y, text) {
+            const el = document.createElement('div');
+            el.innerText = text;
+            el.style.position = 'fixed';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            el.style.color = '#00ff88';
+            el.style.fontWeight = 'bold';
+            el.style.pointerEvents = 'none';
+            el.style.animation = 'floatUp 0.8s ease-out forwards';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 800);
+        }
+
+        // CSS da animação (injetado via JS para manter arquivo único)
+        const style = document.createElement('style');
+        style.innerHTML = `
+            @keyframes floatUp {
+                0% { transform: translateY(0); opacity: 1; }
+                100% { transform: translateY(-50px); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+
+        updateDisplay();
+    </script>
+</body>
+</html>
