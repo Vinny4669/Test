@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ResenhaTale: Full Screen Edition 👀</title>
+    <title>ResenhaTale: Final Boss 👀</title>
     <style>
         @font-face {
             font-family: 'Determination';
@@ -18,7 +18,7 @@
         }
 
         /* INIMIGO E FEEDBACK */
-        #enemy-container { height: 180px; text-align: center; position: relative; width: 400px; }
+        #enemy-container { height: 180px; text-align: center; position: relative; width: 400px; z-index: 5; }
         #enemy-img { width: 120px; transition: filter 0.1s; }
         #enemy-hp-container { 
             width: 160px; height: 12px; background: #333; border: 2px solid white; 
@@ -29,65 +29,85 @@
         .dmg-num {
             position: absolute; color: red; font-size: 30px; font-weight: bold;
             pointer-events: none; z-index: 200; text-shadow: 2px 2px black;
+            animation: dmgAnim 1.5s forwards;
         }
 
-        /* CAIXA DE BATALHA PADRÃO 400x180 */
+        @keyframes dmgAnim {
+            0% { transform: scale(1); opacity: 1; }
+            100% { transform: translateY(100px) rotate(20deg); opacity: 0; }
+        }
+
+        /* CAIXA DE BATALHA 400x180 */
         #box {
             width: 400px; height: 180px; border: 5px solid white;
-            position: relative; background: black; overflow: hidden;
+            position: relative; background: black; overflow: hidden; z-index: 10;
         }
 
         #soul { position: absolute; width: 16px; height: 16px; display: none; z-index: 100; }
 
-        /* STATUS E BOTÕES PC */
-        #status { width: 400px; margin: 15px 0; font-size: 20px; display: flex; align-items: center; }
+        /* STATUS */
+        #status { width: 400px; margin: 10px 0; font-size: 20px; display: flex; align-items: center; z-index: 15; }
         .hp-bar-bg { width: 100px; height: 20px; background: red; margin: 0 10px; }
         #hp-fill { width: 100%; height: 100%; background: #ffff00; }
 
-        .buttons-pc { display: flex; gap: 10px; width: 420px; justify-content: space-between; margin-bottom: 10px; }
-        .btn-game { border: 2px solid #e27d31; color: #e27d31; padding: 8px; width: 95px; text-align: center; cursor: pointer; }
-        .btn-game:hover, .btn-game.active { border-color: white; color: white; background: #e27d31; }
-        .locked { opacity: 0.4; pointer-events: none; filter: grayscale(1); }
+        /* BOTÕES DO MENU (HITBOX CORRIGIDA) */
+        .buttons-menu { 
+            display: flex; gap: 10px; width: 420px; justify-content: space-between; 
+            margin-top: 10px; z-index: 20; position: relative;
+        }
+        .btn-game { 
+            border: 2px solid #e27d31; color: #e27d31; 
+            padding: 10px 0; width: 95px; text-align: center; 
+            cursor: pointer; background: black; font-size: 16px;
+            display: block; box-sizing: border-box;
+        }
+        .btn-game:hover { border-color: white; color: white; background: #e27d31; }
+        .locked { opacity: 0.3; pointer-events: none !important; }
 
         /* CONTROLES MOBILE */
         #mobile-ui {
-            position: fixed; bottom: 20px; width: 100%; display: flex; 
-            justify-content: space-between; padding: 0 20px; box-sizing: border-box; z-index: 1000;
+            position: fixed; bottom: 10px; width: 100%; display: flex; 
+            justify-content: space-between; padding: 0 15px; box-sizing: border-box; z-index: 1000;
         }
-        .dpad-container { display: grid; grid-template-columns: repeat(3, 55px); grid-template-rows: repeat(3, 55px); gap: 5px; }
-        .joystick-base { width: 130px; height: 130px; background: rgba(255,255,255,0.1); border-radius: 50%; position: relative; display: none; }
-        #joystick-knob { width: 50px; height: 50px; background: white; border-radius: 50%; position: absolute; left: 40px; top: 40px; }
-        
+        .dpad { display: grid; grid-template-columns: repeat(3, 50px); grid-template-rows: repeat(3, 50px); gap: 5px; }
         .m-btn { 
-            background: rgba(255,255,255,0.15); border: 2px solid white; color: white;
-            display: flex; align-items: center; justify-content: center; font-size: 22px; font-weight: bold;
-            border-radius: 12px; user-select: none;
+            background: rgba(255,255,255,0.1); border: 2px solid white; color: white;
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+            border-radius: 10px; user-select: none;
         }
-        #interact-btn { width: 90px; height: 90px; border-radius: 50%; background: #e27d31; box-shadow: 0 0 10px #e27d31; }
+        #interact-btn { width: 85px; height: 85px; border-radius: 50%; background: #e27d31; border: 3px solid white; }
 
         /* CONFIGS */
-        #config-bar { position: fixed; top: 10px; left: 10px; display: flex; gap: 10px; }
-        .cfg-btn { background: #222; color: white; border: 1px solid white; padding: 6px; font-size: 10px; cursor: pointer; }
+        #config-bar { position: fixed; top: 10px; left: 10px; display: flex; gap: 5px; z-index: 2000; }
+        .cfg-btn { background: #222; color: white; border: 1px solid white; padding: 5px; font-size: 10px; }
 
-        /* ATAQUES FULL SIZE */
+        /* ATAQUES */
         .attack-obj { position: absolute; pointer-events: none; }
-        .orange { background: #ffa500; box-shadow: 0 0 20px #ffa500; border: 1px solid white; }
-        .blue { background: #008cff; box-shadow: 0 0 20px #008cff; border: 1px solid white; }
-        .bone { background: white; border: 1px solid #333; }
+        .orange { background: #ffa500; box-shadow: 0 0 15px #ffa500; border: 1px solid white; }
+        .blue { background: #008cff; box-shadow: 0 0 15px #008cff; border: 1px solid white; }
+        .bone { background: white; border: 1px solid #000; }
         .beam { background: white; box-shadow: 0 0 30px white; }
         
         #rotating-beam { position: absolute; left: 50%; top: 50%; width: 600px; height: 35px; transform: translate(-50%, -50%); display: none; }
 
-        #attack-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; }
+        #attack-ui { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); display: none; align-items: center; justify-content: center; z-index: 150; }
         #slider-container { width: 380px; height: 120px; background: url('barraataque.png') no-repeat center/100% 100%; position: relative; }
-        #slider-line { position: absolute; width: 8px; height: 100%; background: white; left: 0; box-shadow: 0 0 10px white; }
+        #slider-line { position: absolute; width: 8px; height: 100%; background: white; box-shadow: 0 0 10px white; left: 0; }
+
+        /* TELA DE MORTE */
+        #death-screen {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: black; display: none; flex-direction: column;
+            align-items: center; justify-content: center; z-index: 9999;
+        }
+        #broken-heart { width: 40px; margin-bottom: 20px; }
     </style>
 </head>
 <body>
 
     <div id="config-bar">
-        <button class="cfg-btn" onclick="toggleInvert()">INVERTER LADOS</button>
-        <button class="cfg-btn" onclick="toggleJoystick()">JOYSTICK / SETAS</button>
+        <button class="cfg-btn" onclick="toggleInvert()">INVERTER</button>
+        <button class="cfg-btn" onclick="toggleJoystick()">JOYSTICK</button>
     </div>
 
     <div id="enemy-container">
@@ -96,7 +116,7 @@
     </div>
 
     <div id="box">
-        <div id="dialogue" style="padding: 15px; font-size: 18px;"></div>
+        <div id="dialogue" style="padding: 15px; font-size: 18px; line-height: 1.2;"></div>
         <img id="soul" src="https://i.imgur.com/u7f3RCH.png" alt="❤️">
         <div id="rotating-beam" class="attack-obj"></div>
         <div id="attack-ui"><div id="slider-container"><div id="slider-line"></div></div></div>
@@ -106,7 +126,7 @@
         HP <div class="hp-bar-bg"><div id="hp-fill"></div></div> <span id="hp-text">50 / 50</span>
     </div>
 
-    <div class="buttons-pc" id="btns-pc">
+    <div class="buttons-menu" id="menu-area">
         <div class="btn-game" onclick="handleAction('fight')">LUTAR</div>
         <div class="btn-game" onclick="handleAction('act')">AGIR</div>
         <div class="btn-game" onclick="handleAction('item')">ITEM</div>
@@ -115,19 +135,23 @@
 
     <div id="mobile-ui">
         <div id="move-container">
-            <div class="dpad-container" id="mobile-dpad">
+            <div class="dpad" id="mobile-dpad">
                 <div></div><div class="m-btn" onpointerdown="keys.w=true" onpointerup="keys.w=false">↑</div><div></div>
                 <div class="m-btn" onpointerdown="keys.a=true" onpointerup="keys.a=false">←</div>
                 <div class="m-btn" onpointerdown="keys.s=true" onpointerup="keys.s=false">↓</div>
                 <div class="m-btn" onpointerdown="keys.d=true" onpointerup="keys.d=false">→</div>
             </div>
-            <div class="joystick-base" id="mobile-joystick">
-                <div id="joystick-knob"></div>
-            </div>
         </div>
         <div id="action-container">
             <div class="m-btn" id="interact-btn" onpointerdown="triggerZ()">Z</div>
         </div>
+    </div>
+
+    <!-- TELA DE MORTE -->
+    <div id="death-screen">
+        <img id="broken-heart" src="https://i.imgur.com/u7f3RCH.png">
+        <h1 style="color:white; text-align:center;">VOCÊ ESTÁ MORTO.<br><span style="color:red; font-size:20px;">MANTENHA SUA DETERMINAÇÃO.</span></h1>
+        <button onclick="location.reload()" style="background:none; border:2px solid white; color:white; padding:15px; cursor:pointer; font-family:'Determination'; font-size:20px; margin-top:20px;">TENTAR NOVAMENTE</button>
     </div>
 
     <script>
@@ -137,57 +161,34 @@
         const enemyHpFill = document.getElementById('enemy-hp-fill');
         const enemyHpCont = document.getElementById('enemy-hp-container');
         const sliderLine = document.getElementById('slider-line');
+        const menuArea = document.getElementById('menu-area');
 
         let playerHp = 50, enemyHp = 150, gameState = 'menu', isBusy = true;
         let soulX = 192, soulY = 82, lastX = 192, lastY = 82, isActuallyMoving = false;
         let keys = {}, activeIntervals = [], turnCount = 0;
         let isBlue = false, soulVY = 0, canJump = false;
 
-        // --- MOBILE CONFIG ---
-        let isInverted = false, useJoystick = false;
-        function toggleInvert() {
-            isInverted = !isInverted;
-            document.getElementById('mobile-ui').style.flexDirection = isInverted ? 'row-reverse' : 'row';
-        }
-        function toggleJoystick() {
-            useJoystick = !useJoystick;
-            document.getElementById('mobile-dpad').style.display = useJoystick ? 'none' : 'grid';
-            document.getElementById('mobile-joystick').style.display = useJoystick ? 'block' : 'none';
-        }
+        function toggleInvert() { document.getElementById('mobile-ui').style.flexDirection = document.getElementById('mobile-ui').style.flexDirection === 'row-reverse' ? 'row' : 'row-reverse'; }
+        function toggleJoystick() { alert("Joystick em desenvolvimento. Use as setas!"); }
 
-        const jBase = document.getElementById('mobile-joystick');
-        const jKnob = document.getElementById('joystick-knob');
-        jBase.addEventListener('pointermove', e => {
-            if (!useJoystick) return;
-            const rect = jBase.getBoundingClientRect();
-            let x = e.clientX - rect.left - 65, y = e.clientY - rect.top - 65;
-            const dist = Math.sqrt(x*x + y*y);
-            if (dist > 45) { x *= 45/dist; y *= 45/dist; }
-            jKnob.style.transform = `translate(${x}px, ${y}px)`;
-            keys.w = y < -15; keys.s = y > 15; keys.a = x < -15; keys.d = x > 15;
-        });
-        jBase.addEventListener('pointerup', () => { jKnob.style.transform = 'translate(0,0)'; keys.w = keys.s = keys.a = keys.d = false; });
-
-        // --- FEEDBACK DANO ---
         function createDmgNum(amt) {
             const n = document.createElement('div'); n.className = 'dmg-num'; n.innerText = amt;
             const r = document.getElementById('enemy-img').getBoundingClientRect();
             n.style.left = (r.left + 50) + 'px'; n.style.top = r.top + 'px';
             document.body.appendChild(n);
-            let vy = -7, vx = (Math.random()-0.5)*6, y = r.top;
-            const anim = setInterval(() => {
-                vy += 0.5; y += vy; n.style.top = y + 'px'; n.style.left = (parseFloat(n.style.left) + vx) + 'px';
-                if (y > window.innerHeight) { n.remove(); clearInterval(anim); }
-            }, 30);
+            setTimeout(() => n.remove(), 1500);
         }
 
-        // --- ENGINE ---
         function typeWriter(text, next) {
-            isBusy = true; document.getElementById('btns-pc').classList.add('locked');
+            isBusy = true; menuArea.classList.add('locked');
             dialogue.innerHTML = ""; let i = 0;
             const int = setInterval(() => {
                 dialogue.innerHTML += text.charAt(i++);
-                if (i >= text.length) { clearInterval(int); isBusy = false; if (next) setTimeout(next, 500); else document.getElementById('btns-pc').classList.remove('locked'); }
+                if (i >= text.length) { 
+                    clearInterval(int); isBusy = false; 
+                    if (next) setTimeout(next, 500); 
+                    else menuArea.classList.remove('locked'); 
+                }
             }, 30);
         }
 
@@ -202,7 +203,7 @@
 
         function triggerZ() {
             if (gameState === 'attacking') stopAttack(sliderPos);
-            else if (gameState === 'menu') handleAction('fight');
+            else if (gameState === 'menu' && !isBusy) handleAction('fight');
             if (isBlue && canJump) { soulVY = -8.5; canJump = false; }
         }
 
@@ -225,38 +226,29 @@
                 enemyHpCont.style.opacity = 1; enemyHpFill.style.width = (enemyHp/150*100) + "%";
                 setTimeout(() => enemyHpCont.style.opacity = 0, 1500);
             }
-            typeWriter(`* Dano: ${dmg}`, () => { if (enemyHp <= 0) alert("VENCEU!"); else startEnemyTurn(); });
+            typeWriter(`* Dano: ${dmg}`, () => { if (enemyHp <= 0) win(); else startEnemyTurn(); });
         }
 
-        // --- ATAQUES FULL BOX ---
         function startEnemyTurn() {
             clearAttacks(); gameState = 'enemy_turn'; soul.style.display = 'block';
             soulX = 192; soulY = 82; turnCount++;
             const seq = [1, 2, 3, 4, 5, 4, 7, 8];
             const cur = seq[(turnCount-1)%8];
 
-            if (cur === 1) { // 1. Projéteis
+            if (cur === 1) { 
                 const int = setInterval(() => createBullet(Math.random()*400, -20, (soulX-200)/30, 4.5), 400);
                 activeIntervals.push(int);
-            } else if (cur === 2) { // 2. Blaster Full Height
-                let i = 0; const int = setInterval(() => {
-                    createBlaster(Math.max(300, 800-(i*60)));
-                    if (i++ > 7) clearInterval(int);
-                }, 1100);
+            } else if (cur === 2) { 
+                let i = 0; const int = setInterval(() => { createBlaster(Math.max(300, 800-(i*60))); if (i++ > 7) clearInterval(int); }, 1100);
                 activeIntervals.push(int);
-            } else if (cur === 3) { // 3. Gravity Slam
-                let i = 0; const int = setInterval(() => {
-                    const d = ['t','b','l','r'][Math.floor(Math.random()*4)];
-                    slamSoul(d, Math.max(300, 800-(i*60)));
-                    if (i++ > 6) clearInterval(int);
-                }, 1300);
+            } else if (cur === 3) { 
+                let i = 0; const int = setInterval(() => { const d = ['t','b','l','r'][Math.floor(Math.random()*4)]; slamSoul(d, Math.max(300, 800-(i*60))); if (i++ > 6) clearInterval(int); }, 1300);
                 activeIntervals.push(int);
-            } else if (cur === 4) { // 4. Parede Laranja/Azul
+            } else if (cur === 4) { 
                 const int = setInterval(() => createWall(Math.random()>0.5?'blue':'orange'), 1000);
                 activeIntervals.push(int);
-            } else if (cur === 5) { // 5. Giratório
-                const rb = document.getElementById('rotating-beam');
-                rb.style.display = 'block'; rb.className = 'attack-obj beam';
+            } else if (cur === 5) { 
+                const rb = document.getElementById('rotating-beam'); rb.style.display = 'block'; rb.className = 'attack-obj beam';
                 let ang = 0; const int = setInterval(() => {
                     ang += 5.5; rb.style.transform = `translate(-50%,-50%) rotate(${ang}deg)`;
                     let rad = ang*(Math.PI/180);
@@ -264,25 +256,24 @@
                     if (dist < 20) takeDamage(1.5);
                 }, 20);
                 activeIntervals.push(int);
-            } else if (cur === 7) { // 7. Cantos
+            } else if (cur === 7) { 
                 const int = setInterval(() => { createBullet(0,0,4.5,3.5); createBullet(400,0,-4.5,3.5); }, 600);
                 activeIntervals.push(int);
-            } else if (cur === 8) { // 8. Alma Azul
+            } else if (cur === 8) { 
                 isBlue = true; soul.style.filter = "hue-rotate(150deg)";
                 const int = setInterval(() => createBoneGap(), 1100);
                 activeIntervals.push(int);
             }
-
             setTimeout(endTurn, cur === 8 ? 13000 : 9000);
         }
 
         function createBullet(x,y,vx,vy) {
             const b = document.createElement('div'); b.className = 'attack-obj bone';
-            b.style.width='14px'; b.style.height='14px'; box.appendChild(b);
+            b.style.width='14px'; b.style.height='14px'; b.style.left=x+'px'; b.style.top=y+'px'; box.appendChild(b);
             const m = setInterval(() => {
                 x+=vx; y+=vy; b.style.left=x+'px'; b.style.top=y+'px';
-                if (checkCol(soul,b)) takeDamage(2);
-                if (x<-50||x>450||y<-50||y>250) { b.remove(); clearInterval(m); }
+                if (checkCol(soul,b)) takeDamage(2.5);
+                if (x<-60||x>460||y<-60||y>260) { b.remove(); clearInterval(m); }
             }, 20);
         }
 
@@ -290,15 +281,15 @@
             const isV = Math.random() > 0.5;
             const w = document.createElement('div'); w.className = 'attack-obj';
             w.style.border='1px dashed white'; 
-            if(isV) { w.style.width='50px'; w.style.height='180px'; w.style.left=soulX+'px'; w.style.top='0'; }
-            else { w.style.width='400px'; w.style.height='50px'; w.style.top=soulY+'px'; w.style.left='0'; }
+            if(isV) { w.style.width='55px'; w.style.height='180px'; w.style.left=soulX+'px'; w.style.top='0'; }
+            else { w.style.width='400px'; w.style.height='55px'; w.style.top=soulY+'px'; w.style.left='0'; }
             box.appendChild(w);
             let tx = soulX, ty = soulY;
             setTimeout(() => {
                 w.remove();
                 const beam = document.createElement('div'); beam.className = 'attack-obj beam';
-                if(isV) { beam.style.width='50px'; beam.style.height='180px'; beam.style.left=tx+'px'; beam.style.top='0'; }
-                else { beam.style.width='400px'; beam.style.height='50px'; beam.style.top=ty+'px'; beam.style.left='0'; }
+                if(isV) { beam.style.width='55px'; beam.style.height='180px'; beam.style.left=tx+'px'; beam.style.top='0'; }
+                else { beam.style.width='400px'; beam.style.height='55px'; beam.style.top=ty+'px'; beam.style.left='0'; }
                 box.appendChild(beam);
                 let hit = setInterval(() => { if (checkCol(soul,beam)) takeDamage(2); }, 50);
                 setTimeout(() => { beam.remove(); clearInterval(hit); }, 450);
@@ -310,17 +301,16 @@
             if(d==='t') soulY=0; if(d==='b') soulY=164; if(d==='l') soulX=0; if(d==='r') soulX=384;
             const warn = document.createElement('div'); warn.className = 'attack-obj';
             warn.style.border='1px dashed white';
-            if(d==='t'||d==='b'){ warn.style.width='400px'; warn.style.height='50px'; warn.style.top=(d==='t'?'0':'130px'); warn.style.left='0'; }
-            else { warn.style.width='50px'; warn.style.height='180px'; warn.style.left=(d==='l'?'0':'350px'); warn.style.top='0'; }
+            if(d==='t'||d==='b'){ warn.style.width='400px'; warn.style.height='60px'; warn.style.top=(d==='t'?'0':'120px'); warn.style.left='0'; }
+            else { warn.style.width='60px'; warn.style.height='180px'; warn.style.left=(d==='l'?'0':'340px'); warn.style.top='0'; }
             box.appendChild(warn);
             setTimeout(() => {
                 warn.remove();
                 const spike = document.createElement('div'); spike.className = 'attack-obj bone';
                 spike.style.width=warn.style.width; spike.style.height=warn.style.height;
-                spike.style.left=warn.style.left; spike.style.top=warn.style.top;
-                box.appendChild(spike);
+                spike.style.left=warn.style.left; spike.style.top=warn.style.top; box.appendChild(spike);
                 if (checkCol(soul, spike)) takeDamage(12);
-                setTimeout(() => spike.remove(), 350);
+                setTimeout(() => spike.remove(), 400);
             }, delay);
         }
 
@@ -342,27 +332,48 @@
         function createBoneGap() {
             let h = 30 + Math.random()*70;
             const b1 = document.createElement('div'); b1.className = 'attack-obj bone';
-            b1.style.width='35px'; b1.style.height=h+'px'; b1.style.left='400px'; b1.style.top='0';
+            b1.style.width='40px'; b1.style.height=h+'px'; b1.style.left='400px'; b1.style.top='0';
             const b2 = document.createElement('div'); b2.className = 'attack-obj bone';
-            b2.style.width='35px'; b2.style.height=(180-h-75)+'px'; b2.style.left='400px'; b2.style.bottom='0';
+            b2.style.width='40px'; b2.style.height=(180-h-80)+'px'; b2.style.left='400px'; b2.style.bottom='0';
             box.appendChild(b1); box.appendChild(b2);
             let bx = 400;
             const m = setInterval(() => {
                 bx -= 5.5; b1.style.left = bx+'px'; b2.style.left = bx+'px';
                 if (checkCol(soul,b1) || checkCol(soul,b2)) takeDamage(6);
-                if (bx < -50) { b1.remove(); b2.remove(); clearInterval(m); }
+                if (bx < -60) { b1.remove(); b2.remove(); clearInterval(m); }
             }, 20);
         }
 
         function checkCol(a, b) {
             const r1 = a.getBoundingClientRect(), r2 = b.getBoundingClientRect();
-            return !(r1.right < r2.left+3 || r1.left > r2.right-3 || r1.bottom < r2.top+3 || r1.top > r2.bottom-3);
+            return !(r1.right < r2.left+4 || r1.left > r2.right-4 || r1.bottom < r2.top+4 || r1.top > r2.bottom-4);
         }
 
-        function takeDamage(amt) { playerHp -= amt; updateUI(); if (playerHp <= 0) location.reload(); }
-        function updateUI() { hpFill.style.width = (playerHp/50*100) + "%"; document.getElementById('hp-text').innerText = Math.max(0,Math.floor(playerHp)) + " / 50"; }
-        function clearAttacks() { document.querySelectorAll('.attack-obj').forEach(e => e.remove()); activeIntervals.forEach(clearInterval); activeIntervals = []; isBlue = false; soul.style.filter = "none"; }
-        function endTurn() { clearAttacks(); soul.style.display = 'none'; gameState = 'menu'; typeWriter("* A resenha 👀 continua."); }
+        function takeDamage(amt) {
+            playerHp -= amt; updateUI();
+            if (playerHp <= 0) die();
+        }
+
+        function die() {
+            gameState = 'dead';
+            clearAttacks();
+            document.getElementById('death-screen').style.display = 'flex';
+        }
+
+        function updateUI() { 
+            hpFill.style.width = (playerHp/50*100) + "%"; 
+            document.getElementById('hp-text').innerText = Math.max(0,Math.floor(playerHp)) + " / 50";
+        }
+
+        function clearAttacks() { 
+            document.querySelectorAll('.attack-obj').forEach(e => e.remove()); 
+            activeIntervals.forEach(clearInterval); activeIntervals = []; 
+            isBlue = false; soul.style.filter = "none"; 
+        }
+
+        function endTurn() { clearAttacks(); soul.style.display = 'none'; gameState = 'menu'; typeWriter("* A resenha 👀 te encara."); }
+
+        function win() { clearAttacks(); gameState = 'win'; dialogue.innerHTML = "* VOCÊ VENCEU!"; document.getElementById('enemy-img').style.opacity='0'; }
 
         setInterval(() => {
             if (gameState === 'enemy_turn') {
@@ -382,7 +393,10 @@
             }
         }, 20);
 
-        window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if (e.key === 'z' || e.key === 'Enter') triggerZ(); });
+        window.addEventListener('keydown', e => {
+            keys[e.key.toLowerCase()] = true;
+            if (e.key === 'z' || e.key === 'Enter') triggerZ();
+        });
         window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
     </script>
 </body>
