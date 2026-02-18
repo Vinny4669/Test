@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ResenhaTale: Fixed Walls 👀</title>
+    <title>ResenhaTale 👀</title>
     <style>
         @font-face {
             font-family: 'Determination';
@@ -17,35 +17,40 @@
             height: 100vh; margin: 0; overflow: hidden; touch-action: none;
         }
 
+        /* BOSS */
         #enemy-container { height: 180px; text-align: center; position: relative; width: 400px; z-index: 5; }
         #enemy-img { width: 110px; transition: filter 0.1s; }
         #enemy-hp-container { width: 160px; height: 12px; background: #333; border: 2px solid white; margin: 10px auto; opacity: 0; transition: opacity 0.5s; }
         #enemy-hp-fill { width: 100%; height: 100%; background: #00ff00; }
 
+        /* FEEDBACK DANO */
         .dmg-num { position: absolute; color: red; font-size: 30px; font-weight: bold; pointer-events: none; z-index: 200; text-shadow: 2px 2px black; animation: dmgAnim 1s forwards; }
         @keyframes dmgAnim { 0% { transform: scale(1.2); } 100% { transform: translateY(80px); opacity: 0; } }
 
+        /* CAIXA DE BATALHA */
         #box { width: 400px; height: 180px; border: 5px solid white; position: relative; background: black; overflow: hidden; z-index: 10; }
-        #soul { position: absolute; width: 16px; height: 16px; display: none; z-index: 100; transition: filter 0.2s; }
+        #soul { position: absolute; width: 16px; height: 16px; display: none; z-index: 100; }
 
+        /* STATUS */
         #status { width: 400px; margin: 10px 0; font-size: 20px; display: flex; align-items: center; }
         .hp-bar-bg { width: 100px; height: 20px; background: red; margin: 0 10px; }
         #hp-fill { width: 100%; height: 100%; background: #ffff00; transition: width 0.1s; }
 
+        /* BOTÕES MENU */
         .buttons-menu { display: flex; gap: 10px; width: 420px; justify-content: space-between; margin-top: 10px; z-index: 20; }
         .btn-game { border: 2px solid #e27d31; color: #e27d31; padding: 10px 0; width: 95px; text-align: center; cursor: pointer; background: black; }
         .btn-game:hover { border-color: white; color: white; background: #e27d31; }
         .locked { opacity: 0.3; pointer-events: none !important; }
 
-        /* ATAQUES NEON */
+        /* ATAQUES */
         .attack-obj { position: absolute; pointer-events: none; }
-        .orange { background: #ffa500; box-shadow: 0 0 25px #ffa500; border: 1px solid white; z-index: 50; }
-        .blue { background: #008cff; box-shadow: 0 0 25px #008cff; border: 1px solid white; z-index: 50; }
+        .orange { background: #ffa500; box-shadow: 0 0 25px #ffa500; border: 1px solid white; }
+        .blue { background: #008cff; box-shadow: 0 0 25px #008cff; border: 1px solid white; }
         .bone { background: white; border: 1px solid #000; }
         .beam { background: white; box-shadow: 0 0 40px white; }
-        #rotating-beam { position: absolute; left: 50%; top: 50%; width: 600px; height: 30px; transform: translate(-50%, -50%) rotate(0deg); display: none; z-index: 40; }
+        #rotating-beam { position: absolute; left: 50%; top: 50%; width: 600px; height: 30px; transform: translate(-50%, -50%) rotate(0deg); display: none; }
 
-        /* CONTROLES MOBILE */
+        /* MOBILE UI */
         #mobile-ui { position: fixed; bottom: 10px; width: 100%; display: flex; justify-content: space-between; padding: 0 15px; box-sizing: border-box; z-index: 1000; }
         .dpad { display: grid; grid-template-columns: repeat(3, 55px); grid-template-rows: repeat(3, 55px); gap: 5px; }
         .m-btn { background: rgba(255,255,255,0.1); border: 2px solid white; color: white; display: flex; align-items: center; justify-content: center; font-size: 24px; border-radius: 12px; touch-action: none; }
@@ -85,18 +90,18 @@
 
     <div id="mobile-ui">
         <div class="dpad">
-            <div></div><div class="m-btn" onpointerdown="keys.w=true" onpointerup="keys.w=false">↑</div><div></div>
-            <div class="m-btn" onpointerdown="keys.a=true" onpointerup="keys.a=false">←</div>
-            <div class="m-btn" onpointerdown="keys.s=true" onpointerup="keys.s=false">↓</div>
-            <div class="m-btn" onpointerdown="keys.d=true" onpointerup="keys.d=false">→</div>
+            <div></div><div class="m-btn" onpointerdown="keys.up=true" onpointerup="keys.up=false">↑</div><div></div>
+            <div class="m-btn" onpointerdown="keys.left=true" onpointerup="keys.left=false">←</div>
+            <div class="m-btn" onpointerdown="keys.down=true" onpointerup="keys.down=false">↓</div>
+            <div class="m-btn" onpointerdown="keys.right=true" onpointerup="keys.right=false">→</div>
         </div>
         <div class="m-btn" id="interact-btn" onpointerdown="triggerZ()">Z</div>
     </div>
 
     <div id="death-screen">
         <img src="https://i.imgur.com/u7f3RCH.png" style="width:30px; margin-bottom:20px;">
-        <h1 style="color:white; font-family: Determination;">GAME OVER</h1>
-        <button onclick="location.reload()" style="background:white; color:black; padding:10px; cursor:pointer; font-family: Determination;">TENTAR NOVAMENTE</button>
+        <h1 style="color:white;">GAME OVER</h1>
+        <button onclick="location.reload()" style="background:white; color:black; padding:10px; cursor:pointer;">TENTAR NOVAMENTE</button>
     </div>
 
     <script>
@@ -110,7 +115,8 @@
 
         let playerHp = 50, enemyHp = 150, gameState = 'menu', isBusy = true;
         let soulX = 192, soulY = 82, lastX = 192, lastY = 82;
-        let keys = {}, activeIntervals = [], turnIndex = 0, lastDamage = 0;
+        let keys = { up: false, down: false, left: false, right: false }; // Mapeamento unificado
+        let activeIntervals = [], turnIndex = 0, lastDamage = 0;
         let isBlue = false, soulVY = 0, canJump = false, invul = 0;
 
         function createDmgNum(amt) {
@@ -130,7 +136,7 @@
             }, 30);
         }
 
-        window.onload = () => typeWriter("* A resenha 👀 começou.");
+        window.onload = () => typeWriter("* A resenha 👀 te encara.");
 
         function handleAction(act) {
             if (isBusy || gameState !== 'menu') return;
@@ -165,7 +171,7 @@
                 enemyHpCont.style.opacity = 1; enemyHpFill.style.width = (enemyHp/150*100) + "%";
                 setTimeout(() => enemyHpCont.style.opacity = 0, 1500);
             }
-            typeWriter(`* Dano: ${dmg}`, () => { if (enemyHp <= 0) win(); else startEnemyTurn(); });
+            typeWriter(`* Dano: ${dmg}`, () => { if (enemyHp <= 0) alert("VITÓRIA!"); else startEnemyTurn(); });
         }
 
         function startEnemyTurn() {
@@ -254,14 +260,11 @@
 
         function createWall(type) {
             const w = document.createElement('div'); w.className = 'attack-obj ' + type;
-            w.style.width='40px'; w.style.height='180px'; w.style.left='400px'; w.style.top='0'; box.appendChild(w);
+            w.style.width='45px'; w.style.height='180px'; w.style.left='400px'; w.style.top='0'; box.appendChild(w);
             let wx = 400;
             const m = setInterval(() => {
                 wx -= 6.5; w.style.left = wx + 'px';
-                // DETECÇÃO DE MOVIMENTO REAL
                 let moving = (Math.abs(soulX - lastX) > 0.1 || Math.abs(soulY - lastY) > 0.1);
-                
-                // Colisão com margem de segurança de 10px
                 if (wx < soulX + 12 && wx + 28 > soulX) {
                     if (type === 'blue' && moving) takeDamage(5);
                     if (type === 'orange' && !moving) takeDamage(5);
@@ -287,13 +290,12 @@
 
         function checkCol(a, b) {
             const r1 = a.getBoundingClientRect(), r2 = b.getBoundingClientRect();
-            // Hitbox reduzida para parecer mais justo
             return !(r1.right < r2.left+4 || r1.left > r2.right-4 || r1.bottom < r2.top+4 || r1.top > r2.bottom-4);
         }
 
         function takeDamage(amt) {
             if (invul > 0) return;
-            playerHp -= amt; invul = 20; // 20 frames de invulnerabilidade
+            playerHp -= amt; invul = 20;
             updateUI();
             if (playerHp <= 0) die();
         }
@@ -312,8 +314,8 @@
         }
 
         function endTurn() { clearAttacks(); soul.style.display = 'none'; gameState = 'menu'; typeWriter("* A resenha 👀 observa."); }
-        function win() { clearAttacks(); gameState = 'win'; dialogue.innerHTML = "* VOCÊ VENCEU!"; }
 
+        // MOVIMENTAÇÃO CENTRALIZADA
         setInterval(() => {
             if (gameState === 'enemy_turn') {
                 if (invul > 0) {
@@ -326,11 +328,11 @@
                 
                 const s = 4.2;
                 if (!isBlue) {
-                    if (keys.w) soulY -= s; if (keys.s) soulY += s;
-                    if (keys.a) soulX -= s; if (keys.d) soulX += s;
+                    if (keys.up) soulY -= s; if (keys.down) soulY += s;
+                    if (keys.left) soulX -= s; if (keys.right) soulX += s;
                 } else {
                     soulVY += 0.45; soulY += soulVY;
-                    if (keys.a) soulX -= s; if (keys.d) soulX += s;
+                    if (keys.left) soulX -= s; if (keys.right) soulX += s;
                     if (soulY >= 164) { soulY = 164; soulVY = 0; canJump = true; }
                 }
                 soulX = Math.max(0, Math.min(384, soulX)); soulY = Math.max(0, Math.min(164, soulY));
@@ -338,8 +340,24 @@
             }
         }, 20);
 
-        window.addEventListener('keydown', e => { keys[e.key.toLowerCase()] = true; if (e.key === 'z' || e.key === 'Enter') triggerZ(); });
-        window.addEventListener('keyup', e => keys[e.key.toLowerCase()] = false);
+        // EVENTOS DE TECLADO (WASD + SETINHAS)
+        window.addEventListener('keydown', e => {
+            const k = e.key.toLowerCase();
+            if (k === 'w' || k === 'arrowup') keys.up = true;
+            if (k === 's' || k === 'arrowdown') keys.down = true;
+            if (k === 'a' || k === 'arrowleft') keys.left = true;
+            if (k === 'd' || k === 'arrowright') keys.right = true;
+            
+            if (k === 'z' || k === 'enter') triggerZ();
+        });
+
+        window.addEventListener('keyup', e => {
+            const k = e.key.toLowerCase();
+            if (k === 'w' || k === 'arrowup') keys.up = false;
+            if (k === 's' || k === 'arrowdown') keys.down = false;
+            if (k === 'a' || k === 'arrowleft') keys.left = false;
+            if (k === 'd' || k === 'arrowright') keys.right = false;
+        });
     </script>
 </body>
 </html>
